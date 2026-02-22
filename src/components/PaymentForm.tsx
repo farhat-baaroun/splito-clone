@@ -3,11 +3,14 @@ import { useMutation } from 'convex/react'
 import { X } from 'lucide-react'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
+import MemberAvatar from './MemberAvatar'
+
+const PRESET_TAGS = ['Food', 'Diesel', 'Transport', 'Accommodation', 'Entertainment', 'Other']
 
 interface PaymentFormProps {
   sandboxId: Id<'sandboxes'>
   groupId: Id<'groups'>
-  members: Array< { _id: Id<'members'>; name: string }>
+  members: Array<{ _id: Id<'members'>; name: string; imageStorageId?: Id<'_storage'> | null }>
   onClose: () => void
   editPayment?: {
     id: Id<'payments'>
@@ -15,6 +18,7 @@ interface PaymentFormProps {
     amount: number
     paidBy: Id<'members'>
     paidFor: Id<'members'>[]
+    tags?: string[]
   }
 }
 
@@ -31,6 +35,9 @@ export default function PaymentForm({
   const [paidFor, setPaidFor] = useState<Set<string>>(
     new Set(editPayment?.paidFor?.map(String) ?? [])
   )
+  const [tags, setTags] = useState<Set<string>>(
+    new Set(editPayment?.tags ?? [])
+  )
   const [error, setError] = useState('')
   const createPayment = useMutation(api.payments.create)
   const updatePayment = useMutation(api.payments.update)
@@ -40,6 +47,15 @@ export default function PaymentForm({
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
+      return next
+    })
+  }, [])
+
+  const toggleTag = useCallback((tag: string) => {
+    setTags((prev) => {
+      const next = new Set(prev)
+      if (next.has(tag)) next.delete(tag)
+      else next.add(tag)
       return next
     })
   }, [])
@@ -67,6 +83,7 @@ export default function PaymentForm({
         setError('Select at least one person this expense is for')
         return
       }
+      const tagsArray = Array.from(tags).filter(Boolean)
       try {
         if (editPayment) {
           await updatePayment({
@@ -75,6 +92,7 @@ export default function PaymentForm({
             amount: amountNum,
             paidBy,
             paidFor: paidForIds,
+            tags: tagsArray.length > 0 ? tagsArray : undefined,
           })
         } else {
           await createPayment({
@@ -84,6 +102,7 @@ export default function PaymentForm({
             amount: amountNum,
             paidBy,
             paidFor: paidForIds,
+            tags: tagsArray.length > 0 ? tagsArray : undefined,
           })
         }
         onClose()
@@ -91,7 +110,7 @@ export default function PaymentForm({
         setError(err instanceof Error ? err.message : 'Failed to save')
       }
     },
-    [title, amount, paidBy, paidFor, editPayment, sandboxId, groupId, createPayment, updatePayment, onClose]
+    [title, amount, paidBy, paidFor, tags, editPayment, sandboxId, groupId, createPayment, updatePayment, onClose]
   )
 
   return (
@@ -136,19 +155,24 @@ export default function PaymentForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Paid by</label>
-            <select
-              value={paidBy}
-              onChange={(e) => setPaidBy(e.target.value as Id<'members'>)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-            >
-              <option value="">Select...</option>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Paid by</label>
+            <div className="flex flex-wrap gap-2">
               {members.map((m) => (
-                <option key={m._id} value={m._id}>
-                  {m.name}
-                </option>
+                <button
+                  key={m._id}
+                  type="button"
+                  onClick={() => setPaidBy(paidBy === m._id ? '' : m._id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-colors ${
+                    paidBy === m._id
+                      ? 'border-emerald-600 bg-emerald-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <MemberAvatar name={m.name} memberId={m._id} size="sm" imageStorageId={m.imageStorageId} />
+                  <span className="font-medium">{m.name}</span>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Split between</label>
@@ -165,6 +189,25 @@ export default function PaymentForm({
                   }`}
                 >
                   {m.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tags (optional)</label>
+            <div className="flex flex-wrap gap-2">
+              {PRESET_TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    tags.has(tag)
+                      ? 'bg-gray-700 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {tag}
                 </button>
               ))}
             </div>

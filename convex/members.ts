@@ -42,3 +42,16 @@ export const rename = mutation({
     return args.id
   },
 })
+
+export const updateImage = mutation({
+  args: {
+    id: v.id('members'),
+    imageStorageId: v.optional(v.id('_storage')),
+  },
+  handler: async (ctx, args) => {
+    const member = await ctx.db.get(args.id)
+    if (!member) throw new Error('Member not found')
+    await ctx.db.patch(args.id, { imageStorageId: args.imageStorageId })
+    return args.id
+  },
+})

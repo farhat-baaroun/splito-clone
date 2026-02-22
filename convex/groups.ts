@@ -26,3 +26,16 @@ export const list = query({
       .collect()
   },
 })
+
+export const updateImage = mutation({
+  args: {
+    id: v.id('groups'),
+    imageStorageId: v.optional(v.id('_storage')),
+  },
+  handler: async (ctx, args) => {
+    const group = await ctx.db.get(args.id)
+    if (!group) throw new Error('Group not found')
+    await ctx.db.patch(args.id, { imageStorageId: args.imageStorageId })
+    return args.id
+  },
+})

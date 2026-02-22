@@ -3,6 +3,7 @@ import { v } from 'convex/values'
 import {
   computeBalances,
   balancesToEntries,
+  computeExpensesPerMember,
   greedyMinCashFlow,
 } from './lib/settlement'
 
@@ -36,11 +37,17 @@ export const getSettlement = query({
     const suggestions = greedyMinCashFlow(balances, nameMap)
 
     const totalExpense = payments.reduce((sum, p) => sum + p.amount, 0)
+    const expensesPerMember = computeExpensesPerMember(
+      paymentInputs,
+      memberIds,
+      nameMap
+    )
 
     return {
       balances: balanceEntries,
       suggestions,
       totalExpense,
+      expensesPerMember,
     }
   },
 })

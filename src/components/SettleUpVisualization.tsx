@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 interface Suggestion {
   from: string
   to: string
@@ -8,17 +10,10 @@ interface Suggestion {
 
 interface SettleUpVisualizationProps {
   suggestions: Suggestion[]
+  formatCurrency: (amount: number) => string
 }
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
-
-export default function SettleUpVisualization({ suggestions }: SettleUpVisualizationProps) {
+function SettleUpVisualizationComponent({ suggestions, formatCurrency }: SettleUpVisualizationProps) {
   if (suggestions.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -50,3 +45,5 @@ export default function SettleUpVisualization({ suggestions }: SettleUpVisualiza
     </div>
   )
 }
+
+export default memo(SettleUpVisualizationComponent)

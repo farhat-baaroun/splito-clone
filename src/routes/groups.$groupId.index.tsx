@@ -5,6 +5,7 @@ import { api } from '@convex/_generated/api'
 import { Plus, Users, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import SandboxCard from '@/components/SandboxCard'
 import CreateSandboxForm from '@/components/CreateSandboxForm'
+import ImageUpload from '@/components/ImageUpload'
 import type { Id } from '@convex/_generated/dataModel'
 
 export const Route = createFileRoute('/groups/$groupId/')({
@@ -24,6 +25,7 @@ function GroupDashboard() {
   })
   const addMember = useMutation(api.members.add)
   const removeMember = useMutation(api.members.remove)
+  const updateMemberImage = useMutation(api.members.updateImage)
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,9 +73,15 @@ function GroupDashboard() {
               {members?.map((m) => (
                 <li
                   key={m._id}
-                  className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg"
+                  className="flex items-center gap-3 py-2 px-3 bg-gray-50 rounded-lg"
                 >
-                  <span className="text-gray-900">{m.name}</span>
+                  <ImageUpload
+                    storageId={m.imageStorageId}
+                    onUploaded={(id) => updateMemberImage({ id: m._id, imageStorageId: id })}
+                    size="sm"
+                    shape="circle"
+                  />
+                  <span className="text-gray-900 flex-1">{m.name}</span>
                   <button
                     onClick={() => removeMember({ id: m._id })}
                     className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -129,6 +137,8 @@ function GroupDashboard() {
                 totalExpense={sb.totalExpense}
                 memberCount={sb.memberCount}
                 lastActivity={sb.lastActivity}
+                currency={sb.currency}
+                imageStorageId={sb.imageStorageId}
               />
             ))}
           </div>

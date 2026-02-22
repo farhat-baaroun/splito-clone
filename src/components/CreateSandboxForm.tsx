@@ -10,8 +10,11 @@ interface CreateSandboxFormProps {
   onClose: () => void
 }
 
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'MAD', 'AED']
+
 export default function CreateSandboxForm({ groupId, onClose }: CreateSandboxFormProps) {
   const [name, setName] = useState('')
+  const [currency, setCurrency] = useState('USD')
   const [error, setError] = useState('')
   const createSandbox = useMutation(api.sandboxes.create)
   const navigate = useNavigate()
@@ -26,7 +29,7 @@ export default function CreateSandboxForm({ groupId, onClose }: CreateSandboxFor
         return
       }
       try {
-        const sandboxId = await createSandbox({ groupId, name: trimmed })
+        const sandboxId = await createSandbox({ groupId, name: trimmed, currency })
         onClose()
         navigate({
           to: '/groups/$groupId/sandbox/$sandboxId',
@@ -36,7 +39,7 @@ export default function CreateSandboxForm({ groupId, onClose }: CreateSandboxFor
         setError(err instanceof Error ? err.message : 'Failed to create trip')
       }
     },
-    [name, groupId, createSandbox, onClose, navigate]
+    [name, currency, groupId, createSandbox, onClose, navigate]
   )
 
   return (
@@ -69,6 +72,23 @@ export default function CreateSandboxForm({ groupId, onClose }: CreateSandboxFor
               className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
               autoFocus
             />
+          </div>
+          <div>
+            <label htmlFor="sandbox-currency" className="block text-sm font-medium text-gray-700 mb-1">
+              Currency
+            </label>
+            <select
+              id="sandbox-currency"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
