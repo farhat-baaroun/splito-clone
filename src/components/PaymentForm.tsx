@@ -176,6 +176,13 @@ export default function PaymentForm({
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Split between</label>
+            <button
+              type="button"
+              onClick={() => setPaidFor(new Set(members.map((m) => String(m._id))))}
+              className="mb-2 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+            >
+              Split between all
+            </button>
             <div className="flex flex-wrap gap-2">
               {members.map((m) => (
                 <button
