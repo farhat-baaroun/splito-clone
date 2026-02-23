@@ -1,6 +1,11 @@
 [build]
-  command = "vite build"
-  dir = "dist/client"
+  # Convex deploy runs first, then builds the frontend with VITE_CONVEX_URL set
+  command = "npx convex deploy --cmd 'npm run build' --cmd-url-env-var-name VITE_CONVEX_URL"
+  publish = "dist/client"
+
+[build.environment]
+  NODE_VERSION = "20"
+
 [dev]
   command = "npm run dev"
   targetPort = 3000
