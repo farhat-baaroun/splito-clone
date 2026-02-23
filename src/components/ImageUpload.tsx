@@ -6,7 +6,7 @@ import type { Id } from '@convex/_generated/dataModel'
 
 interface ImageUploadProps {
   storageId?: Id<'_storage'> | null
-  onUploaded: (storageId: Id<'_storage'>) => void
+  onUploaded: (storageId: Id<'_storage'>) => void | Promise<void>
   size?: 'sm' | 'md' | 'lg'
   shape?: 'circle' | 'square'
   className?: string
@@ -46,8 +46,16 @@ export default function ImageUpload({
         headers: { 'Content-Type': file.type },
         body: file,
       })
-      const { storageId: id } = await res.json()
-      if (id) onUploaded(id)
+      if (!res.ok) {
+        const body = await res.text()
+        throw new Error(`Upload failed: ${res.status} ${res.statusText}${body ? ` - ${body}` : ''}`)
+      }
+      const data = await res.json()
+      const id = data.storageId
+      if (id) {
+        const result = onUploaded(id)
+        if (result instanceof Promise) await result
+      }
     } catch (err) {
       console.error('Upload failed:', err)
     } finally {

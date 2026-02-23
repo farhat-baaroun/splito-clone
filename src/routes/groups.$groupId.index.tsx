@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery, useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
-import { Plus, Users, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
+import {  ChevronDown, ChevronRight, Plus,Trash2, Users } from 'lucide-react'
+import type { Id } from '@convex/_generated/dataModel'
 import SandboxCard from '@/components/SandboxCard'
 import CreateSandboxForm from '@/components/CreateSandboxForm'
 import ImageUpload from '@/components/ImageUpload'
-import type { Id } from '@convex/_generated/dataModel'
 
 export const Route = createFileRoute('/groups/$groupId/')({
   component: GroupDashboard,
@@ -27,7 +27,7 @@ function GroupDashboard() {
   const removeMember = useMutation(api.members.remove)
   const updateMemberImage = useMutation(api.members.updateImage)
 
-  const handleAddMember = async (e: React.FormEvent) => {
+  const handleAddMember = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     const name = newMemberName.trim()
     if (!name) return
@@ -145,9 +145,10 @@ function GroupDashboard() {
         )}
       </div>
 
-      {showCreateSandbox && (
+      {showCreateSandbox && members && (
         <CreateSandboxForm
           groupId={groupId as Id<'groups'>}
+          members={members}
           onClose={() => setShowCreateSandbox(false)}
         />
       )}

@@ -15,6 +15,7 @@ import type * as members from "../members.js";
 import type * as paymentLogs from "../paymentLogs.js";
 import type * as payments from "../payments.js";
 import type * as sandboxes from "../sandboxes.js";
+import type * as settleUpMarks from "../settleUpMarks.js";
 import type * as settlement from "../settlement.js";
 import type * as settlementSnapshots from "../settlementSnapshots.js";
 
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   paymentLogs: typeof paymentLogs;
   payments: typeof payments;
   sandboxes: typeof sandboxes;
+  settleUpMarks: typeof settleUpMarks;
   settlement: typeof settlement;
   settlementSnapshots: typeof settlementSnapshots;
 }>;

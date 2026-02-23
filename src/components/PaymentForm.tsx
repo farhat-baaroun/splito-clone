@@ -121,7 +121,7 @@ export default function PaymentForm({
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">
-            {editPayment ? 'Edit payment' : 'Add payment'}
+            {editPayment ? 'Edit payment' : 'a3tih rayeb'}
           </h2>
           <button
             onClick={onClose}
@@ -217,7 +217,7 @@ export default function PaymentForm({
             type="submit"
             className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors"
           >
-            {editPayment ? 'Save' : 'Add payment'}
+            {editPayment ? 'Save' : 'a3tih rayeb'}
           </button>
         </form>
       </div>

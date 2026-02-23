@@ -54,6 +54,7 @@ function SandboxPage() {
   const members = useQuery(api.members.listByGroup, { groupId: groupIdTyped })
   const logs = useQuery(api.paymentLogs.listBySandbox, { sandboxId: sandboxIdTyped })
   const snapshots = useQuery(api.settlementSnapshots.listBySandbox, { sandboxId: sandboxIdTyped })
+  const markedSettleUpKeys = useQuery(api.settleUpMarks.listBySandbox, { sandboxId: sandboxIdTyped })
   const formatCurrency = useFormatCurrency(sandbox?.currency ?? 'USD')
 
   const setStatus = useMutation(api.sandboxes.setStatus)
@@ -62,9 +63,18 @@ function SandboxPage() {
   const updateCurrency = useMutation(api.sandboxes.updateCurrency)
   const removePayment = useMutation(api.payments.remove)
   const revertFromLog = useMutation(api.payments.revertFromLog)
+  const toggleSettleUpMark = useMutation(api.settleUpMarks.toggle)
 
   const isEditable = sandbox?.status === 'active'
-  const memberMap = new Map(members?.map((m) => [m._id, m.name]) ?? [])
+  const sandboxMembers = useMemo(() => {
+    if (!members) return undefined
+    if (sandbox?.memberIds?.length) {
+      const idSet = new Set(sandbox.memberIds)
+      return members.filter((m) => idSet.has(m._id))
+    }
+    return members
+  }, [members, sandbox?.memberIds])
+  const memberMap = new Map(sandboxMembers?.map((m) => [m._id, m.name]) ?? [])
 
   const filteredSortedPayments = useMemo(() => {
     if (!payments) return []
@@ -163,11 +173,11 @@ function SandboxPage() {
       <div className="flex flex-wrap items-center gap-2 mb-4">
         {isEditable && (
           <select
-            value={sandbox.currency}
+            value={sandbox.currency ?? 'USD'}
             onChange={(e) => updateCurrency({ id: sandboxIdTyped, currency: e.target.value })}
             className="px-2 py-1 rounded-lg border border-gray-300 text-xs font-medium bg-white"
           >
-            {['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'MAD', 'AED'].map((c) => (
+            {['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'MAD', 'AED', 'SAR'].map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
@@ -184,7 +194,7 @@ function SandboxPage() {
           {sandbox.status === 'active' && <Check size={12} />}
           {sandbox.status === 'settled' && <Check size={12} />}
           {sandbox.status === 'archived' && <Archive size={12} />}
-          {sandbox.status.charAt(0).toUpperCase() + sandbox.status.slice(1)}
+          {sandbox.status === 'settled' ? 'magdhouh' : sandbox.status.charAt(0).toUpperCase() + sandbox.status.slice(1)}
         </span>
         {sandbox.status === 'settled' && isEditable === false && (
           <button
@@ -202,7 +212,7 @@ function SandboxPage() {
               className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200"
             >
               <Check size={12} />
-              Mark settled
+              9odh 3lina
             </button>
             <button
               onClick={handleArchive}
@@ -225,11 +235,20 @@ function SandboxPage() {
         <SettleUpVisualization
           suggestions={settlement?.suggestions ?? []}
           formatCurrency={formatCurrency}
+          markedKeys={markedSettleUpKeys}
+          onToggleMarked={(s) =>
+            toggleSettleUpMark({
+              sandboxId: sandboxIdTyped,
+              fromMemberId: s.from,
+              toMemberId: s.to,
+              amount: s.amount,
+            })
+          }
         />
       </div>
 
       <div className="sticky top-14 z-10 -mx-4 px-4 py-3 bg-gray-50 border-b border-gray-200 -mt-4 mb-4">
-        {isEditable && members && members.length > 0 && (
+        {isEditable && sandboxMembers && sandboxMembers.length > 0 && (
           <button
             onClick={() => {
               setEditingPayment(null)
@@ -238,7 +257,7 @@ function SandboxPage() {
             className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors"
           >
             <Plus size={20} />
-            Add payment
+            a3tih rayeb
           </button>
         )}
       </div>
@@ -301,7 +320,7 @@ function SandboxPage() {
               className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
             >
               <option value="">All payers</option>
-              {members?.map((m) => (
+              {sandboxMembers?.map((m) => (
                 <option key={m._id} value={m._id}>
                   {m.name}
                 </option>
@@ -345,19 +364,19 @@ function SandboxPage() {
             <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
               <p className="text-gray-600 mb-2">No payments yet</p>
               <p className="text-sm text-gray-500 mb-4">
-                {!members?.length
+                {!sandboxMembers?.length
                   ? 'Add members to the group first.'
                   : isEditable
                     ? 'Tap the button below to add one.'
                     : 'This sandbox is read-only.'}
               </p>
-              {isEditable && members && members.length > 0 && (
+              {isEditable && sandboxMembers && sandboxMembers.length > 0 && (
                 <button
                   onClick={() => setShowPaymentForm(true)}
                   className="inline-flex items-center gap-2 py-2 px-4 bg-emerald-100 text-emerald-700 rounded-lg font-medium"
                 >
                   <Plus size={18} />
-                  Add payment
+                  a3tih rayeb
                 </button>
               )}
             </div>
@@ -365,7 +384,7 @@ function SandboxPage() {
             <>
               <div className="space-y-2">
                 {paginatedPayments.map((p) => {
-                  const payer = members?.find((m) => m._id === p.paidBy)
+                  const payer = sandboxMembers?.find((m) => m._id === p.paidBy)
                   return (
                     <PaymentRow
                       key={p._id}
@@ -437,11 +456,11 @@ function SandboxPage() {
         </div>
       )}
 
-      {showPaymentForm && members && (
+      {showPaymentForm && sandboxMembers && (
         <PaymentForm
           sandboxId={sandboxIdTyped}
           groupId={groupIdTyped}
-          members={members}
+          members={sandboxMembers}
           onClose={closePaymentForm}
           editPayment={editingPayment ?? undefined}
         />

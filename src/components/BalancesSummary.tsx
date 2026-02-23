@@ -32,7 +32,7 @@ function BalancesSummaryComponent({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <h3 className="font-semibold text-gray-900 mb-3">Balances</h3>
+      <h3 className="font-semibold text-gray-900 mb-3">el cash mayoufech</h3>
       <p className="text-2xl font-bold text-emerald-600 mb-4">
         {formatCurrency(totalExpense)}
         <span className="text-sm font-normal text-gray-500 ml-2">total</span>

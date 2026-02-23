@@ -49,6 +49,10 @@ export const updateImage = mutation({
     imageStorageId: v.optional(v.id('_storage')),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new Error('Unauthorized: authentication required')
+    }
     const member = await ctx.db.get(args.id)
     if (!member) throw new Error('Member not found')
     await ctx.db.patch(args.id, { imageStorageId: args.imageStorageId })

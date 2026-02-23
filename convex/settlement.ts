@@ -18,12 +18,13 @@ export const getSettlement = query({
       .withIndex('by_sandbox', (q) => q.eq('sandboxId', args.sandboxId))
       .collect()
 
-    const members = await ctx.db
+    const allMembers = await ctx.db
       .query('members')
       .withIndex('by_group', (q) => q.eq('groupId', sandbox.groupId))
       .collect()
 
-    const memberIds = members.map((m) => m._id)
+    const memberIds = sandbox.memberIds ?? allMembers.map((m) => m._id)
+    const members = allMembers.filter((m) => memberIds.includes(m._id))
     const nameMap = new Map(members.map((m) => [m._id, m.name]))
 
     const paymentInputs = payments.map((p) => ({

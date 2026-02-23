@@ -17,15 +17,23 @@ export const create = mutation({
     groupId: v.id('groups'),
     name: v.string(),
     currency: v.optional(v.string()),
+    memberIds: v.optional(v.array(v.id('members'))),
   },
   handler: async (ctx, args) => {
     const group = await ctx.db.get(args.groupId)
     if (!group) throw new Error('Group not found')
+    const members = await ctx.db
+      .query('members')
+      .withIndex('by_group', (q) => q.eq('groupId', args.groupId))
+      .collect()
+    const memberIds = args.memberIds ?? members.map((m) => m._id)
+    if (memberIds.length === 0) throw new Error('At least one member required')
     return await ctx.db.insert('sandboxes', {
       groupId: args.groupId,
       name: args.name.trim(),
       status: 'active',
       currency: args.currency ?? 'USD',
+      memberIds,
     })
   },
 })
@@ -54,10 +62,12 @@ export const listByGroupWithSummary = query({
       .query('members')
       .withIndex('by_group', (q) => q.eq('groupId', args.groupId))
       .collect()
-    const memberCount = members.length
 
     const result = await Promise.all(
       sandboxes.map(async (sandbox) => {
+        const memberCount = sandbox.memberIds
+          ? sandbox.memberIds.length
+          : members.length
         const payments = await ctx.db
           .query('payments')
           .withIndex('by_sandbox', (q) => q.eq('sandboxId', sandbox._id))
@@ -113,11 +123,12 @@ export const setStatus = mutation({
         .query('payments')
         .withIndex('by_sandbox', (q) => q.eq('sandboxId', args.id))
         .collect()
-      const members = await ctx.db
+      const allMembers = await ctx.db
         .query('members')
         .withIndex('by_group', (q) => q.eq('groupId', sandbox.groupId))
         .collect()
-      const memberIds = members.map((m) => m._id)
+      const memberIds = sandbox.memberIds ?? allMembers.map((m) => m._id)
+      const members = allMembers.filter((m) => memberIds.includes(m._id))
       const nameMap = new Map(members.map((m) => [m._id, m.name]))
       const paymentInputs = payments.map((p) => ({
         amount: p.amount,
@@ -152,6 +163,10 @@ export const updateImage = mutation({
     imageStorageId: v.optional(v.id('_storage')),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new Error('Unauthorized: authentication required')
+    }
     const sandbox = await ctx.db.get(args.id)
     if (!sandbox) throw new Error('Sandbox not found')
     await ctx.db.patch(args.id, { imageStorageId: args.imageStorageId })

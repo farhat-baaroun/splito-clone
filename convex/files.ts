@@ -1,9 +1,13 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { mutation, query } from './_generated/server'
 
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new Error('Unauthorized: authentication required')
+    }
     return await ctx.storage.generateUploadUrl()
   },
 })

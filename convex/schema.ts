@@ -25,6 +25,7 @@ export default defineSchema({
     status: sandboxStatus,
     currency: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
+    memberIds: v.optional(v.array(v.id('members'))),
     settledAt: v.optional(v.number()),
     archivedAt: v.optional(v.number()),
   })
@@ -50,6 +51,13 @@ export default defineSchema({
     suggestions: v.any(),
     totalExpense: v.number(),
     triggeredBy: v.string(),
+  }).index('by_sandbox', ['sandboxId']),
+
+  settleUpMarks: defineTable({
+    sandboxId: v.id('sandboxes'),
+    fromMemberId: v.string(),
+    toMemberId: v.string(),
+    amount: v.number(),
   }).index('by_sandbox', ['sandboxId']),
 
   paymentLogs: defineTable({

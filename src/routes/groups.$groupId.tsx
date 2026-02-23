@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { createFileRoute, Outlet, useParams } from '@tanstack/react-router'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
@@ -13,6 +14,8 @@ export const Route = createFileRoute('/groups/$groupId')({
 function GroupLayout() {
   const { groupId } = useParams({ from: '/groups/$groupId' })
   const groupIdTyped = groupId as Id<'groups'>
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const group = useQuery(api.groups.get, { id: groupIdTyped })
   const updateImage = useMutation(api.groups.updateImage)
 
@@ -51,10 +54,23 @@ function GroupLayout() {
           </Link>
           <ImageUpload
             storageId={group.imageStorageId}
-            onUploaded={(storageId) => updateImage({ id: groupIdTyped, imageStorageId: storageId })}
+            onUploaded={async (storageId) => {
+              setUploadError(null)
+              setUploadingImage(true)
+              try {
+                await updateImage({ id: groupIdTyped, imageStorageId: storageId })
+              } catch (err) {
+                setUploadError(err instanceof Error ? err.message : 'Failed to save image')
+              } finally {
+                setUploadingImage(false)
+              }
+            }}
             size="sm"
             shape="circle"
           />
+          {uploadError && (
+            <p className="text-xs text-red-600 mt-1">{uploadError}</p>
+          )}
           <h1 className="text-lg font-semibold text-gray-900 truncate flex-1">
             {group.name}
           </h1>
