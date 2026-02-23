@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { createFileRoute, Outlet, useParams } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import type { Id } from '@convex/_generated/dataModel'
 import { Link } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
+import ImageUpload from '@/components/ImageUpload'
 
 export const Route = createFileRoute('/groups/$groupId')({
   component: GroupLayout,
@@ -11,7 +13,11 @@ export const Route = createFileRoute('/groups/$groupId')({
 
 function GroupLayout() {
   const { groupId } = useParams({ from: '/groups/$groupId' })
-  const group = useQuery(api.groups.get, { id: groupId as Id<'groups'> })
+  const groupIdTyped = groupId as Id<'groups'>
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const group = useQuery(api.groups.get, { id: groupIdTyped })
+  const updateImage = useMutation(api.groups.updateImage)
 
   if (group === undefined) {
     return (
@@ -46,6 +52,25 @@ function GroupLayout() {
           >
             <ArrowLeft size={20} />
           </Link>
+          <ImageUpload
+            storageId={group.imageStorageId}
+            onUploaded={async (storageId) => {
+              setUploadError(null)
+              setUploadingImage(true)
+              try {
+                await updateImage({ id: groupIdTyped, imageStorageId: storageId })
+              } catch (err) {
+                setUploadError(err instanceof Error ? err.message : 'Failed to save image')
+              } finally {
+                setUploadingImage(false)
+              }
+            }}
+            size="sm"
+            shape="circle"
+          />
+          {uploadError && (
+            <p className="text-xs text-red-600 mt-1">{uploadError}</p>
+          )}
           <h1 className="text-lg font-semibold text-gray-900 truncate flex-1">
             {group.name}
           </h1>

@@ -7,14 +7,30 @@ import type { Id } from '@convex/_generated/dataModel'
 
 interface CreateSandboxFormProps {
   groupId: Id<'groups'>
+  members: Array<{ _id: Id<'members'>; name: string }>
   onClose: () => void
 }
 
-export default function CreateSandboxForm({ groupId, onClose }: CreateSandboxFormProps) {
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'MAD', 'AED', 'SAR']
+
+export default function CreateSandboxForm({ groupId, members, onClose }: CreateSandboxFormProps) {
   const [name, setName] = useState('')
+  const [currency, setCurrency] = useState('USD')
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(
+    () => new Set(members.map((m) => m._id))
+  )
   const [error, setError] = useState('')
   const createSandbox = useMutation(api.sandboxes.create)
   const navigate = useNavigate()
+
+  const toggleMember = useCallback((id: string) => {
+    setSelectedMemberIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -25,8 +41,13 @@ export default function CreateSandboxForm({ groupId, onClose }: CreateSandboxFor
         setError('Trip name is required')
         return
       }
+      const memberIds = Array.from(selectedMemberIds) as Id<'members'>[]
+      if (memberIds.length === 0) {
+        setError('Select at least one member')
+        return
+      }
       try {
-        const sandboxId = await createSandbox({ groupId, name: trimmed })
+        const sandboxId = await createSandbox({ groupId, name: trimmed, currency, memberIds })
         onClose()
         navigate({
           to: '/groups/$groupId/sandbox/$sandboxId',
@@ -36,7 +57,7 @@ export default function CreateSandboxForm({ groupId, onClose }: CreateSandboxFor
         setError(err instanceof Error ? err.message : 'Failed to create trip')
       }
     },
-    [name, groupId, createSandbox, onClose, navigate]
+    [name, currency, selectedMemberIds, groupId, createSandbox, onClose, navigate]
   )
 
   return (
@@ -69,6 +90,43 @@ export default function CreateSandboxForm({ groupId, onClose }: CreateSandboxFor
               className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
               autoFocus
             />
+          </div>
+          <div>
+            <label htmlFor="sandbox-currency" className="block text-sm font-medium text-gray-700 mb-1">
+              Currency
+            </label>
+            <select
+              id="sandbox-currency"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Members in this trip</label>
+            <p className="text-xs text-gray-500 mb-2">Toggle off members who are not part of this trip</p>
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+              {members.map((m) => (
+                <button
+                  key={m._id}
+                  type="button"
+                  onClick={() => toggleMember(m._id)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    selectedMemberIds.has(m._id)
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {m.name}
+                </button>
+              ))}
+            </div>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button

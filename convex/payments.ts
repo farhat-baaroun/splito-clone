@@ -1,5 +1,6 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import type { Id } from './_generated/dataModel'
 
 function isEditable(status: string) {
   return status === 'active'
@@ -24,6 +25,7 @@ export const create = mutation({
     amount: v.number(),
     paidBy: v.id('members'),
     paidFor: v.array(v.id('members')),
+    tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const sandbox = await ctx.db.get(args.sandboxId)
@@ -69,6 +71,7 @@ export const update = mutation({
     amount: v.optional(v.number()),
     paidBy: v.optional(v.id('members')),
     paidFor: v.optional(v.array(v.id('members'))),
+    tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const payment = await ctx.db.get(args.id)
@@ -84,6 +87,7 @@ export const update = mutation({
       amount: payment.amount,
       paidBy: payment.paidBy,
       paidFor: payment.paidFor,
+      tags: payment.tags,
     }
 
     const updates: Record<string, unknown> = {
@@ -99,6 +103,7 @@ export const update = mutation({
       if (args.paidFor.length === 0) throw new Error('At least one beneficiary required')
       updates.paidFor = args.paidFor
     }
+    if (args.tags !== undefined) updates.tags = args.tags
 
     await ctx.db.patch(args.id, updates)
     const updated = await ctx.db.get(args.id)
@@ -139,6 +144,7 @@ export const remove = mutation({
       amount: payment.amount,
       paidBy: payment.paidBy,
       paidFor: payment.paidFor,
+      tags: payment.tags,
     }
 
     await ctx.db.insert('paymentLogs', {
@@ -151,5 +157,67 @@ export const remove = mutation({
 
     await ctx.db.delete(args.id)
     return args.id
+  },
+})
+
+export const revertFromLog = mutation({
+  args: { logId: v.id('paymentLogs') },
+  handler: async (ctx, args) => {
+    const log = await ctx.db.get(args.logId)
+    if (!log) throw new Error('Log not found')
+    if (log.action === 'create') {
+      throw new Error('Cannot undo a create action')
+    }
+    const sandbox = await ctx.db.get(log.sandboxId)
+    if (!sandbox || sandbox.status !== 'active') {
+      throw new Error('Cannot revert in a settled or archived sandbox')
+    }
+    const prev = log.previousValue as
+      | { title: string; amount: number; paidBy: Id<'members'>; paidFor: Id<'members'>[]; tags?: string[] }
+      | undefined
+    if (!prev) throw new Error('No previous value to revert to')
+    const now = Date.now()
+    if (log.action === 'delete') {
+      const paymentId = await ctx.db.insert('payments', {
+        sandboxId: log.sandboxId,
+        groupId: sandbox.groupId,
+        title: prev.title,
+        amount: prev.amount,
+        paidBy: prev.paidBy as Id<'members'>,
+        paidFor: prev.paidFor as Id<'members'>[],
+        tags: prev.tags,
+        updatedAt: now,
+      })
+      await ctx.db.insert('paymentLogs', {
+        sandboxId: log.sandboxId,
+        paymentId,
+        action: 'create',
+        newValue: prev,
+        timestamp: now,
+      })
+      return paymentId
+    }
+    if (log.action === 'update' && log.paymentId) {
+      const payment = await ctx.db.get(log.paymentId)
+      if (!payment) throw new Error('Payment no longer exists')
+      await ctx.db.patch(log.paymentId, {
+        title: prev.title,
+        amount: prev.amount,
+        paidBy: prev.paidBy as Id<'members'>,
+        paidFor: prev.paidFor as Id<'members'>[],
+        tags: prev.tags,
+        updatedAt: now,
+      })
+      await ctx.db.insert('paymentLogs', {
+        sandboxId: log.sandboxId,
+        paymentId: log.paymentId,
+        action: 'update',
+        previousValue: log.newValue,
+        newValue: prev,
+        timestamp: now,
+      })
+      return log.paymentId
+    }
+    throw new Error('Cannot revert this log entry')
   },
 })

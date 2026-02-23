@@ -10,17 +10,22 @@ const sandboxStatus = v.union(
 export default defineSchema({
   groups: defineTable({
     name: v.string(),
+    imageStorageId: v.optional(v.id('_storage')),
   }),
 
   members: defineTable({
     groupId: v.id('groups'),
     name: v.string(),
+    imageStorageId: v.optional(v.id('_storage')),
   }).index('by_group', ['groupId']),
 
   sandboxes: defineTable({
     groupId: v.id('groups'),
     name: v.string(),
     status: sandboxStatus,
+    currency: v.optional(v.string()),
+    imageStorageId: v.optional(v.id('_storage')),
+    memberIds: v.optional(v.array(v.id('members'))),
     settledAt: v.optional(v.number()),
     archivedAt: v.optional(v.number()),
   })
@@ -34,10 +39,26 @@ export default defineSchema({
     amount: v.number(),
     paidBy: v.id('members'),
     paidFor: v.array(v.id('members')),
+    tags: v.optional(v.array(v.string())),
     updatedAt: v.number(),
   })
     .index('by_sandbox', ['sandboxId'])
     .index('by_group', ['groupId']),
+
+  settlementSnapshots: defineTable({
+    sandboxId: v.id('sandboxes'),
+    balances: v.any(),
+    suggestions: v.any(),
+    totalExpense: v.number(),
+    triggeredBy: v.string(),
+  }).index('by_sandbox', ['sandboxId']),
+
+  settleUpMarks: defineTable({
+    sandboxId: v.id('sandboxes'),
+    fromMemberId: v.string(),
+    toMemberId: v.string(),
+    amount: v.number(),
+  }).index('by_sandbox', ['sandboxId']),
 
   paymentLogs: defineTable({
     sandboxId: v.id('sandboxes'),

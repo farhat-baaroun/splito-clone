@@ -62,6 +62,49 @@ export function balancesToEntries(
   return entries.sort((a, b) => b.balance - a.balance)
 }
 
+export interface ExpensesPerMember {
+  memberId: string
+  name?: string
+  totalPaid: number
+  totalOwed: number
+  netBalance: number
+}
+
+export function computeExpensesPerMember(
+  payments: PaymentInput[],
+  memberIds: string[],
+  nameMap?: Map<string, string>
+): ExpensesPerMember[] {
+  const totalPaid = new Map<string, number>()
+  const totalOwed = new Map<string, number>()
+  for (const id of memberIds) {
+    totalPaid.set(id, 0)
+    totalOwed.set(id, 0)
+  }
+
+  for (const payment of payments) {
+    const { amount, paidBy, paidFor } = payment
+    if (paidFor.length === 0) continue
+    const share = amount / paidFor.length
+    totalPaid.set(paidBy, (totalPaid.get(paidBy) ?? 0) + amount)
+    for (const memberId of paidFor) {
+      totalOwed.set(memberId, (totalOwed.get(memberId) ?? 0) + share)
+    }
+  }
+
+  return memberIds.map((memberId) => {
+    const paid = totalPaid.get(memberId) ?? 0
+    const owed = totalOwed.get(memberId) ?? 0
+    return {
+      memberId,
+      name: nameMap?.get(memberId),
+      totalPaid: paid,
+      totalOwed: owed,
+      netBalance: owed - paid,
+    }
+  })
+}
+
 export function greedyMinCashFlow(
   balances: Map<string, number>,
   nameMap?: Map<string, string>

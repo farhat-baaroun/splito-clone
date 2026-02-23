@@ -3,6 +3,7 @@ import { v } from 'convex/values'
 import {
   computeBalances,
   balancesToEntries,
+  computeExpensesPerMember,
   greedyMinCashFlow,
 } from './lib/settlement'
 
@@ -17,12 +18,13 @@ export const getSettlement = query({
       .withIndex('by_sandbox', (q) => q.eq('sandboxId', args.sandboxId))
       .collect()
 
-    const members = await ctx.db
+    const allMembers = await ctx.db
       .query('members')
       .withIndex('by_group', (q) => q.eq('groupId', sandbox.groupId))
       .collect()
 
-    const memberIds = members.map((m) => m._id)
+    const memberIds = sandbox.memberIds ?? allMembers.map((m) => m._id)
+    const members = allMembers.filter((m) => memberIds.includes(m._id))
     const nameMap = new Map(members.map((m) => [m._id, m.name]))
 
     const paymentInputs = payments.map((p) => ({
@@ -36,11 +38,17 @@ export const getSettlement = query({
     const suggestions = greedyMinCashFlow(balances, nameMap)
 
     const totalExpense = payments.reduce((sum, p) => sum + p.amount, 0)
+    const expensesPerMember = computeExpensesPerMember(
+      paymentInputs,
+      memberIds,
+      nameMap
+    )
 
     return {
       balances: balanceEntries,
       suggestions,
       totalExpense,
+      expensesPerMember,
     }
   },
 })

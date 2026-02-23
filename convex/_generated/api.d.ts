@@ -8,13 +8,16 @@
  * @module
  */
 
+import type * as files from "../files.js";
 import type * as groups from "../groups.js";
 import type * as lib_settlement from "../lib/settlement.js";
 import type * as members from "../members.js";
 import type * as paymentLogs from "../paymentLogs.js";
 import type * as payments from "../payments.js";
 import type * as sandboxes from "../sandboxes.js";
+import type * as settleUpMarks from "../settleUpMarks.js";
 import type * as settlement from "../settlement.js";
+import type * as settlementSnapshots from "../settlementSnapshots.js";
 
 import type {
   ApiFromModules,
@@ -23,13 +26,16 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  files: typeof files;
   groups: typeof groups;
   "lib/settlement": typeof lib_settlement;
   members: typeof members;
   paymentLogs: typeof paymentLogs;
   payments: typeof payments;
   sandboxes: typeof sandboxes;
+  settleUpMarks: typeof settleUpMarks;
   settlement: typeof settlement;
+  settlementSnapshots: typeof settlementSnapshots;
 }>;
 
 /**

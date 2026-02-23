@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery, useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
-import { Plus, Users, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
+import {  ChevronDown, ChevronRight, Plus,Trash2, Users } from 'lucide-react'
+import type { Id } from '@convex/_generated/dataModel'
 import SandboxCard from '@/components/SandboxCard'
 import CreateSandboxForm from '@/components/CreateSandboxForm'
-import type { Id } from '@convex/_generated/dataModel'
+import ImageUpload from '@/components/ImageUpload'
 
 export const Route = createFileRoute('/groups/$groupId/')({
   component: GroupDashboard,
@@ -24,8 +25,9 @@ function GroupDashboard() {
   })
   const addMember = useMutation(api.members.add)
   const removeMember = useMutation(api.members.remove)
+  const updateMemberImage = useMutation(api.members.updateImage)
 
-  const handleAddMember = async (e: React.FormEvent) => {
+  const handleAddMember = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     const name = newMemberName.trim()
     if (!name) return
@@ -71,9 +73,15 @@ function GroupDashboard() {
               {members?.map((m) => (
                 <li
                   key={m._id}
-                  className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg"
+                  className="flex items-center gap-3 py-2 px-3 bg-gray-50 rounded-lg"
                 >
-                  <span className="text-gray-900">{m.name}</span>
+                  <ImageUpload
+                    storageId={m.imageStorageId}
+                    onUploaded={(id) => updateMemberImage({ id: m._id, imageStorageId: id })}
+                    size="sm"
+                    shape="circle"
+                  />
+                  <span className="text-gray-900 flex-1">{m.name}</span>
                   <button
                     onClick={() => removeMember({ id: m._id })}
                     className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -129,15 +137,18 @@ function GroupDashboard() {
                 totalExpense={sb.totalExpense}
                 memberCount={sb.memberCount}
                 lastActivity={sb.lastActivity}
+                currency={sb.currency}
+                imageStorageId={sb.imageStorageId}
               />
             ))}
           </div>
         )}
       </div>
 
-      {showCreateSandbox && (
+      {showCreateSandbox && members && (
         <CreateSandboxForm
           groupId={groupId as Id<'groups'>}
+          members={members}
           onClose={() => setShowCreateSandbox(false)}
         />
       )}
