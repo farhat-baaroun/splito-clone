@@ -55,7 +55,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <ConvexProvider>
-          <Header />
+          {/* <Header /> */}
           {children}
           {import.meta.env.DEV && (
             <TanStackDevtools
