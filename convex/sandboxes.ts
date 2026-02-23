@@ -187,6 +187,74 @@ export const updateCurrency = mutation({
   },
 })
 
+export const addMembers = mutation({
+  args: {
+    id: v.id('sandboxes'),
+    memberIdsToAdd: v.array(v.id('members')),
+  },
+  handler: async (ctx, args) => {
+    const sandbox = await ctx.db.get(args.id)
+    if (!sandbox) throw new Error('Sandbox not found')
+    if (sandbox.status !== 'active') {
+      throw new Error('Cannot change members of a settled or archived sandbox')
+    }
+    const group = await ctx.db.get(sandbox.groupId)
+    if (!group) throw new Error('Group not found')
+    const groupMembers = await ctx.db
+      .query('members')
+      .withIndex('by_group', (q) => q.eq('groupId', sandbox.groupId))
+      .collect()
+    const groupMemberIds = new Set(groupMembers.map((m) => m._id))
+    for (const id of args.memberIdsToAdd) {
+      if (!groupMemberIds.has(id)) {
+        throw new Error('All members must belong to the group')
+      }
+    }
+    const currentIds = sandbox.memberIds ?? groupMembers.map((m) => m._id)
+    const newIds = [...new Set([...currentIds, ...args.memberIdsToAdd])]
+    if (newIds.length === currentIds.length) return args.id
+    await ctx.db.patch(args.id, { memberIds: newIds })
+    return args.id
+  },
+})
+
+export const removeMember = mutation({
+  args: {
+    id: v.id('sandboxes'),
+    memberId: v.id('members'),
+  },
+  handler: async (ctx, args) => {
+    const sandbox = await ctx.db.get(args.id)
+    if (!sandbox) throw new Error('Sandbox not found')
+    if (sandbox.status !== 'active') {
+      throw new Error('Cannot change members of a settled or archived sandbox')
+    }
+    const payments = await ctx.db
+      .query('payments')
+      .withIndex('by_sandbox', (q) => q.eq('sandboxId', args.id))
+      .collect()
+    const membersInPayments = new Set<string>()
+    for (const p of payments) {
+      membersInPayments.add(p.paidBy)
+      for (const id of p.paidFor) membersInPayments.add(id)
+    }
+    if (membersInPayments.has(args.memberId)) {
+      throw new Error('Cannot remove a member who appears in at least one payment')
+    }
+    const group = await ctx.db.get(sandbox.groupId)
+    if (!group) throw new Error('Group not found')
+    const groupMembers = await ctx.db
+      .query('members')
+      .withIndex('by_group', (q) => q.eq('groupId', sandbox.groupId))
+      .collect()
+    const currentIds = sandbox.memberIds ?? groupMembers.map((m) => m._id)
+    const newIds = currentIds.filter((id) => id !== args.memberId)
+    if (newIds.length === 0) throw new Error('At least one member required')
+    await ctx.db.patch(args.id, { memberIds: newIds })
+    return args.id
+  },
+})
+
 export const reopen = mutation({
   args: { id: v.id('sandboxes') },
   handler: async (ctx, args) => {

@@ -11,6 +11,10 @@ import {
   Receipt,
   Activity,
   History,
+  Users,
+  UserPlus,
+  Trash2,
+  Lock,
 } from 'lucide-react'
 import BalancesSummary from '@/components/BalancesSummary'
 import SettleUpVisualization from '@/components/SettleUpVisualization'
@@ -18,6 +22,7 @@ import ActivityLogs from '@/components/ActivityLogs'
 import PaymentForm from '@/components/PaymentForm'
 import PaymentRow from '@/components/PaymentRow'
 import ImageUpload from '@/components/ImageUpload'
+import MemberAvatar from '@/components/MemberAvatar'
 import { useFormatCurrency } from '@/hooks/useFormatCurrency'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 
@@ -31,7 +36,7 @@ function SandboxPage() {
   const { groupId, sandboxId } = Route.useParams()
   const groupIdTyped = groupId as Id<'groups'>
   const sandboxIdTyped = sandboxId as Id<'sandboxes'>
-  const [activeTab, setActiveTab] = useState<'payments' | 'logs' | 'history'>('payments')
+  const [activeTab, setActiveTab] = useState<'payments' | 'members' | 'logs' | 'history'>('payments')
   const [search, setSearch] = useState('')
   const [filterPaidBy, setFilterPaidBy] = useState<Id<'members'> | ''>('')
   const [filterTag, setFilterTag] = useState('')
@@ -64,6 +69,8 @@ function SandboxPage() {
   const removePayment = useMutation(api.payments.remove)
   const revertFromLog = useMutation(api.payments.revertFromLog)
   const toggleSettleUpMark = useMutation(api.settleUpMarks.toggle)
+  const addSandboxMembers = useMutation(api.sandboxes.addMembers)
+  const removeSandboxMember = useMutation(api.sandboxes.removeMember)
 
   const isEditable = sandbox?.status === 'active'
   const sandboxMembers = useMemo(() => {
@@ -75,6 +82,19 @@ function SandboxPage() {
     return members
   }, [members, sandbox?.memberIds])
   const memberMap = new Map(sandboxMembers?.map((m) => [m._id, m.name]) ?? [])
+  const membersInPayments = useMemo(() => {
+    const set = new Set<Id<'members'>>()
+    for (const p of payments ?? []) {
+      set.add(p.paidBy)
+      for (const id of p.paidFor) set.add(id)
+    }
+    return set
+  }, [payments])
+  const groupMembersNotInSandbox = useMemo(() => {
+    if (!members || !sandboxMembers) return []
+    const sandboxIdSet = new Set(sandboxMembers.map((m) => m._id))
+    return members.filter((m) => !sandboxIdSet.has(m._id))
+  }, [members, sandboxMembers])
 
   const filteredSortedPayments = useMemo(() => {
     if (!payments) return []
@@ -273,6 +293,17 @@ function SandboxPage() {
           Payments
         </button>
         <button
+          onClick={() => setActiveTab('members')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'members'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Users size={18} />
+          Members
+        </button>
+        <button
           onClick={() => setActiveTab('logs')}
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'logs'
@@ -389,7 +420,10 @@ function SandboxPage() {
                       payment={p}
                       memberName={memberMap.get(p.paidBy) ?? 'Unknown'}
                       memberImageStorageId={payer?.imageStorageId}
-                      paidForNames={p.paidFor.map((id) => memberMap.get(id) ?? '')}
+                      paidForMembers={p.paidFor.map((id) => {
+                        const m = sandboxMembers?.find((mem) => mem._id === id)
+                        return { id, name: m?.name ?? memberMap.get(id) ?? '?', imageStorageId: m?.imageStorageId }
+                      })}
                       formatCurrency={formatCurrency}
                       isEditable={isEditable}
                       onEdit={() => openEditForm(p)}
@@ -420,6 +454,83 @@ function SandboxPage() {
                 </div>
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'members' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Trip members</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Members in this trip. Those with payments cannot be removed.
+            </p>
+            <ul className="space-y-2">
+              {sandboxMembers?.map((m) => {
+                const inPayments = membersInPayments.has(m._id)
+                return (
+                  <li
+                    key={m._id}
+                    className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <MemberAvatar
+                        name={m.name}
+                        memberId={m._id}
+                        size="sm"
+                        imageStorageId={m.imageStorageId}
+                      />
+                      <span className="font-medium text-gray-900">{m.name}</span>
+                      {inPayments && (
+                        <span
+                          className="flex items-center gap-1 text-xs text-gray-500"
+                          title="In at least one payment"
+                        >
+                          <Lock size={12} />
+                        </span>
+                      )}
+                    </div>
+                    {isEditable && !inPayments && (
+                      <button
+                        onClick={() => removeSandboxMember({ id: sandboxIdTyped, memberId: m._id })}
+                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        aria-label={`Remove ${m.name}`}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+          {isEditable && groupMembersNotInSandbox.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">Add from group</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Add group members who are not yet in this trip.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {groupMembersNotInSandbox.map((m) => (
+                  <button
+                    key={m._id}
+                    onClick={() =>
+                      addSandboxMembers({ id: sandboxIdTyped, memberIdsToAdd: [m._id] })
+                    }
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50 transition-colors"
+                  >
+                    <UserPlus size={16} className="text-emerald-600" />
+                    <MemberAvatar
+                      name={m.name}
+                      memberId={m._id}
+                      size="xs"
+                      imageStorageId={m.imageStorageId}
+                    />
+                    <span className="font-medium text-gray-900">{m.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}

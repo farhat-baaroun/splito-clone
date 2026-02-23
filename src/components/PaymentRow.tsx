@@ -3,11 +3,17 @@ import { Pencil, Trash2 } from 'lucide-react'
 import type { Doc, Id } from '@convex/_generated/dataModel'
 import MemberAvatar from './MemberAvatar'
 
+interface PaidForMember {
+  id: string
+  name: string
+  imageStorageId?: Id<'_storage'> | null
+}
+
 interface PaymentRowProps {
   payment: Doc<'payments'>
   memberName: string
   memberImageStorageId?: Id<'_storage'> | null
-  paidForNames: string[]
+  paidForMembers: PaidForMember[]
   formatCurrency: (amount: number) => string
   isEditable: boolean
   onEdit: () => void
@@ -18,7 +24,7 @@ function PaymentRowComponent({
   payment,
   memberName,
   memberImageStorageId,
-  paidForNames,
+  paidForMembers,
   formatCurrency,
   isEditable,
   onEdit,
@@ -34,9 +40,26 @@ function PaymentRowComponent({
       />
       <div className="min-w-0 flex-1">
         <p className="font-medium text-gray-900">{payment.title}</p>
-        <p className="text-sm text-gray-500">
-          {memberName} paid • split between {paidForNames.filter(Boolean).join(', ')}
-        </p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-sm text-gray-500 shrink-0">{memberName} paid</span>
+          {paidForMembers.length > 0 && (
+            <>
+              <span className="text-gray-300">•</span>
+              <div className="flex -space-x-2 min-w-0 overflow-hidden" title={`Split between ${paidForMembers.map((m) => m.name).join(', ')}`}>
+                {paidForMembers.map((m) => (
+                  <MemberAvatar
+                    key={m.id}
+                    name={m.name}
+                    memberId={m.id}
+                    size="xs"
+                    imageStorageId={m.imageStorageId}
+                    className="ring-2 ring-white"
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
         {payment.tags && payment.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {payment.tags.map((tag) => (
