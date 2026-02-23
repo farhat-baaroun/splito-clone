@@ -57,19 +57,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <ConvexProvider>
           <Header />
           {children}
-          <TanStackDevtools
-            config={{
-              position: 'bottom-right',
-            }}
-            plugins={[
-              {
-                name: 'Tanstack Router',
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              StoreDevtools,
-              TanStackQueryDevtools,
-            ]}
-          />
+          {import.meta.env.DEV && (
+            <TanStackDevtools
+              config={{
+                position: 'bottom-right',
+              }}
+              plugins={[
+                {
+                  name: 'Tanstack Router',
+                  render: <TanStackRouterDevtoolsPanel />,
+                },
+                StoreDevtools,
+                TanStackQueryDevtools,
+              ]}
+            />
+          )}
         </ConvexProvider>
         <Scripts />
       </body>
