@@ -104,9 +104,7 @@ function SandboxPage() {
 
   const totalPages = Math.ceil(filteredSortedPayments.length / PAGE_SIZE)
   const allTags = useMemo(() => {
-    const set = new Set<string>()
-    payments?.forEach((p) => p.tags?.forEach((t) => set.add(t)))
-    return Array.from(set)
+    return [...new Set((payments ?? []).flatMap((p) => p.tags ?? []))]
   }, [payments])
 
   if (sandbox === undefined) {
